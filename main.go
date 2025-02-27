@@ -38,54 +38,31 @@ func main() {
 	table = tview.NewTable().SetBorders(true)
 
 	// Set up the header row.
-	headers := []string{"ID", "Task", "Due", "Priority", "Status"}
-	for col, header := range headers {
-		table.SetCell(0, col,
-			tview.NewTableCell(header).
-				SetTextColor(tcell.ColorYellow).
-				SetAlign(tview.AlignCenter).
-				SetSelectable(false))
-	}
+	setupHeaders()
 
 	// Populate the table with task data.
 	refreshTable()
 
-	// Make the table selectable.
-	table.SetSelectable(true, false)
-
-	// Add input capture for keybindings.
-	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Rune() {
-		case 'c', 'C': // Mark task as complete.
-			toggleTaskStatus("✅ Done")
-		case 'x', 'X': // Mark task as pending.
-			toggleTaskStatus("❌ Pending")
-		case 'a', 'A': // Add a new task.
-			addTaskForm()
-		case 'd', 'D': // Delete a task.
-			deleteTask()
-		case 'e', 'E': // Edit a task.
-			editTaskForm()
-		case 's', 'S': // Save tasks to file.
-			saveTasks()
-		case 'h', 'H': // Show help.
-			showHelp()
-		case 'q', 'Q': // Quit the application.
-			app.Stop()
-		}
-		return event
-	})
+	// Make the table selectable and set up keybindings.
+	table.SetSelectable(true, false).SetInputCapture(handleKeypress)
 
 	// Create a header text view for the agenda title.
 	title := tview.NewTextView().
-		SetText("📝 My Terminal To-Do Agenda (Press 'H' for Help)").
+		SetText("📝 My Terminal To-Do Agenda").
 		SetTextAlign(tview.AlignCenter).
 		SetTextColor(tcell.ColorGreen)
 
-	// Arrange the title and table in a vertical layout.
+	// Create a footer text view for the help information.
+	help := tview.NewTextView().
+		SetText("A: Add | E: Edit | D: Delete | C: Complete | X: Pending | S: Save | H: Help | Q: Quit").
+		SetTextAlign(tview.AlignCenter).
+		SetTextColor(tcell.ColorYellow)
+
+	// Arrange the title, table, and help in a vertical layout.
 	layout := tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(title, 1, 1, false).
-		AddItem(table, 0, 10, true)
+		AddItem(title, 1, 1, false). // Title at the top.
+		AddItem(table, 0, 10, true). // Table in the middle.
+		AddItem(help, 1, 1, false)   // Help at the bottom.
 
 	// Run the application.
 	if err := app.SetRoot(layout, true).Run(); err != nil {
@@ -93,9 +70,8 @@ func main() {
 	}
 }
 
-// Refresh the table with updated task data.
-func refreshTable() {
-	table.Clear()
+// Set up the table headers.
+func setupHeaders() {
 	headers := []string{"ID", "Task", "Due", "Priority", "Status"}
 	for col, header := range headers {
 		table.SetCell(0, col,
@@ -104,21 +80,45 @@ func refreshTable() {
 				SetAlign(tview.AlignCenter).
 				SetSelectable(false))
 	}
+}
 
-	// Populate the table with task data.
+// Refresh the table with updated task data.
+func refreshTable() {
+	table.Clear()
+	setupHeaders()
+
 	for i, task := range tasks {
-		row := i + 1 // Row 0 is header.
-		table.SetCell(row, 0, tview.NewTableCell(fmt.Sprintf("%d", task.ID)).
-			SetAlign(tview.AlignCenter))
-		table.SetCell(row, 1, tview.NewTableCell(task.Description).
-			SetAlign(tview.AlignLeft))
-		table.SetCell(row, 2, tview.NewTableCell(task.Due.Format("2006-01-02")).
-			SetAlign(tview.AlignCenter))
-		table.SetCell(row, 3, tview.NewTableCell(task.Priority).
-			SetAlign(tview.AlignCenter))
-		table.SetCell(row, 4, tview.NewTableCell(task.Status).
-			SetAlign(tview.AlignCenter))
+		row := i + 1
+		table.SetCell(row, 0, tview.NewTableCell(fmt.Sprintf("%d", task.ID)).SetAlign(tview.AlignCenter))
+		table.SetCell(row, 1, tview.NewTableCell(task.Description).SetAlign(tview.AlignLeft))
+		table.SetCell(row, 2, tview.NewTableCell(task.Due.Format("2006-01-02")).SetAlign(tview.AlignCenter))
+		table.SetCell(row, 3, tview.NewTableCell(task.Priority).SetAlign(tview.AlignCenter))
+		table.SetCell(row, 4, tview.NewTableCell(task.Status).SetAlign(tview.AlignCenter))
 	}
+}
+
+// Handle keypress events.
+func handleKeypress(event *tcell.EventKey) *tcell.EventKey {
+	switch event.Rune() {
+	case 'c', 'C':
+		toggleTaskStatus("✅ Done")
+	case 'x', 'X':
+		toggleTaskStatus("❌ Pending")
+	case 'a', 'A':
+		addTaskForm()
+	case 'd', 'D':
+		confirmDeleteTask()
+	case 'e', 'E':
+		editTaskForm()
+	case 's', 'S':
+		saveTasks()
+		showMessage("Tasks saved successfully!")
+	case 'h', 'H':
+		showHelp()
+	case 'q', 'Q':
+		app.Stop()
+	}
+	return event
 }
 
 // Toggle task status between "✅ Done" and "❌ Pending".
@@ -135,39 +135,46 @@ func addTaskForm() {
 	form := tview.NewForm().
 		AddInputField("Description", "", 30, nil, nil).
 		AddInputField("Due Date (YYYY-MM-DD)", "", 10, nil, nil).
-		AddDropDown("Priority", []string{"🔥 High", "👍 Medium", "⭐ Low"}, 0, nil).
-		AddButton("Save", func() {
-			description := form.GetFormItem(0).(*tview.InputField).GetText()
-			dueDateStr := form.GetFormItem(1).(*tview.InputField).GetText()
-			dueDate, _ := time.Parse("2006-01-02", dueDateStr)
-			_, priority := form.GetFormItem(2).(*tview.DropDown).GetCurrentOption()
+		AddDropDown("Priority", []string{"🔥 High", "👍 Medium", "⭐ Low"}, 0, nil)
 
-			task := Task{
-				ID:          taskIDCounter,
-				Description: description,
-				Due:         dueDate,
-				Priority:    priority,
-				Status:      "❌ Pending",
-			}
-			tasks = append(tasks, task)
-			taskIDCounter++
-			refreshTable()
-			app.SetRoot(table, true)
-		}).
-		AddButton("Cancel", func() {
-			app.SetRoot(table, true)
-		})
+	form.AddButton("Save", func() {
+		desc := form.GetFormItem(0).(*tview.InputField).GetText()
+		dueDateStr := form.GetFormItem(1).(*tview.InputField).GetText()
+		dueDate, err := time.Parse("2006-01-02", dueDateStr)
+		if err != nil || desc == "" {
+			showError("Invalid input! Description cannot be empty & date must be YYYY-MM-DD.")
+			return
+		}
+		_, priority := form.GetFormItem(2).(*tview.DropDown).GetCurrentOption()
+		tasks = append(tasks, Task{taskIDCounter, desc, dueDate, priority, "❌ Pending"})
+		taskIDCounter++
+		refreshTable()
+		app.SetRoot(table, true).SetFocus(table)
+	})
+
+	form.AddButton("Cancel", func() {
+		app.SetRoot(table, true).SetFocus(table)
+	})
 
 	form.SetBorder(true).SetTitle("Add New Task").SetTitleAlign(tview.AlignLeft)
-	app.SetRoot(form, true)
+	app.SetRoot(form, true).SetFocus(form)
 }
 
-// Delete the selected task.
-func deleteTask() {
+// Confirm deletion of a task.
+func confirmDeleteTask() {
 	row, _ := table.GetSelection()
 	if row > 0 && row <= len(tasks) {
-		tasks = append(tasks[:row-1], tasks[row:]...)
-		refreshTable()
+		modal := tview.NewModal().
+			SetText("Are you sure you want to delete this task?").
+			AddButtons([]string{"Yes", "No"}).
+			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				if buttonLabel == "Yes" {
+					tasks = append(tasks[:row-1], tasks[row:]...)
+					refreshTable()
+				}
+				app.SetRoot(table, true).SetFocus(table)
+			})
+		app.SetRoot(modal, true)
 	}
 }
 
@@ -179,28 +186,41 @@ func editTaskForm() {
 		form := tview.NewForm().
 			AddInputField("Description", task.Description, 30, nil, nil).
 			AddInputField("Due Date (YYYY-MM-DD)", task.Due.Format("2006-01-02"), 10, nil, nil).
-			AddDropDown("Priority", []string{"🔥 High", "👍 Medium", "⭐ Low"}, 0, nil).
-			AddButton("Save", func() {
-				task.Description = form.GetFormItem(0).(*tview.InputField).GetText()
-				dueDateStr := form.GetFormItem(1).(*tview.InputField).GetText()
-				task.Due, _ = time.Parse("2006-01-02", dueDateStr)
-				_, task.Priority = form.GetFormItem(2).(*tview.DropDown).GetCurrentOption()
-				refreshTable()
-				app.SetRoot(table, true)
-			}).
-			AddButton("Cancel", func() {
-				app.SetRoot(table, true)
-			})
+			AddDropDown("Priority", []string{"🔥 High", "👍 Medium", "⭐ Low"}, 0, nil)
+
+		form.AddButton("Save", func() {
+			task.Description = form.GetFormItem(0).(*tview.InputField).GetText()
+			dueDateStr := form.GetFormItem(1).(*tview.InputField).GetText()
+			dueDate, err := time.Parse("2006-01-02", dueDateStr)
+			if err != nil || task.Description == "" {
+				showError("Invalid input! Description cannot be empty & date must be YYYY-MM-DD.")
+				return
+			}
+			_, task.Priority = form.GetFormItem(2).(*tview.DropDown).GetCurrentOption()
+			task.Due = dueDate
+			refreshTable()
+			app.SetRoot(table, true).SetFocus(table)
+		})
+
+		form.AddButton("Cancel", func() {
+			app.SetRoot(table, true).SetFocus(table)
+		})
 
 		form.SetBorder(true).SetTitle("Edit Task").SetTitleAlign(tview.AlignLeft)
-		app.SetRoot(form, true)
+		app.SetRoot(form, true).SetFocus(form)
 	}
 }
 
 // Save tasks to a JSON file.
 func saveTasks() {
-	file, _ := json.MarshalIndent(tasks, "", "  ")
-	_ = os.WriteFile(dataFile, file, 0644)
+	file, err := json.MarshalIndent(tasks, "", "  ")
+	if err != nil {
+		log.Printf("Error marshalling tasks: %v", err)
+		return
+	}
+	if err := os.WriteFile(dataFile, file, 0644); err != nil {
+		log.Printf("Error saving tasks: %v", err)
+	}
 }
 
 // Load tasks from a JSON file.
@@ -209,30 +229,34 @@ func loadTasks() {
 	if err != nil {
 		return
 	}
-	_ = json.Unmarshal(file, &tasks)
+	if err := json.Unmarshal(file, &tasks); err != nil {
+		log.Printf("Error loading tasks: %v", err)
+	}
 	if len(tasks) > 0 {
 		taskIDCounter = tasks[len(tasks)-1].ID + 1
 	}
 }
 
+// Show an error message in a modal.
+func showError(message string) {
+	modal := tview.NewModal().SetText(message).AddButtons([]string{"OK"}).SetDoneFunc(func(int, string) {
+		app.SetRoot(table, true).SetFocus(table)
+	})
+	app.SetRoot(modal, true)
+}
+
+// Show a success message in a modal.
+func showMessage(message string) {
+	modal := tview.NewModal().SetText(message).AddButtons([]string{"OK"}).SetDoneFunc(func(int, string) {
+		app.SetRoot(table, true).SetFocus(table)
+	})
+	app.SetRoot(modal, true)
+}
+
 // Show a help dialog with keybindings.
 func showHelp() {
-	helpText := `Keybindings:
-- A: Add a new task
-- E: Edit the selected task
-- D: Delete the selected task
-- C: Mark task as complete
-- X: Mark task as pending
-- S: Save tasks to file
-- H: Show this help dialog
-- Q: Quit the application`
-
-	modal := tview.NewModal().
-		SetText(helpText).
-		AddButtons([]string{"OK"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			app.SetRoot(table, true)
-		})
-
+	modal := tview.NewModal().SetText("A: Add | E: Edit | D: Delete | C: Complete | X: Pending | S: Save | H: Help | Q: Quit").AddButtons([]string{"OK"}).SetDoneFunc(func(int, string) {
+		app.SetRoot(table, true).SetFocus(table)
+	})
 	app.SetRoot(modal, true)
 }
