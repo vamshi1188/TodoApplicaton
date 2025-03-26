@@ -50,26 +50,51 @@ func main() {
 	// Create a table with borders
 	table = tview.NewTable().SetBorders(true)
 
+<<<<<<< HEAD
 	// Set up the header row
+=======
+	// Set up the header row.
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 	setupHeaders()
 
 	// Populate the table with task data
 	refreshTable()
 
+<<<<<<< HEAD
 	// Make the table selectable and set up keybindings
 	table.SetSelectable(true, false).SetInputCapture(handleKeypress)
 
 	// Create a header text view for the agenda title
+=======
+	// Make the table selectable and set up keybindings.
+	table.SetSelectable(true, false).SetInputCapture(handleKeypress)
+
+	// Create a header text view for the agenda title.
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 	title := tview.NewTextView().
 		SetText("📝 My Terminal To-Do Agenda").
 		SetTextAlign(tview.AlignCenter).
 		SetTextColor(tcell.ColorGreen)
 
+<<<<<<< HEAD
 	// Create a footer text view for the help information
 	help := tview.NewTextView().
 		SetText("A: Add | E: Edit | D: Delete | C: Complete | P: Pending | S: Save | H: Help | Q: Quit").
 		SetTextAlign(tview.AlignCenter).
 		SetTextColor(tcell.ColorYellow)
+=======
+	// Create a footer text view for the help information.
+	help := tview.NewTextView().
+		SetText("A: Add | E: Edit | D: Delete | C: Complete | X: Pending | S: Save | H: Help | Q: Quit").
+		SetTextAlign(tview.AlignCenter).
+		SetTextColor(tcell.ColorYellow)
+
+	// Arrange the title, table, and help in a vertical layout.
+	layout := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(title, 1, 1, false). // Title at the top.
+		AddItem(table, 0, 10, true). // Table in the middle.
+		AddItem(help, 1, 1, false)   // Help at the bottom.
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 
 	// Arrange the title, table, and help in a vertical layout
 	layout := tview.NewFlex().SetDirection(tview.FlexRow).
@@ -83,6 +108,7 @@ func main() {
 	}
 }
 
+<<<<<<< HEAD
 // Initialize the AWS S3 client
 func initS3Client() {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("ap-south-1"))
@@ -121,6 +147,9 @@ func loadTasksFromS3() {
 }
 
 // Set up the table headers
+=======
+// Set up the table headers.
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 func setupHeaders() {
 	headers := []string{"ID", "Task", "Due", "Priority", "Status"}
 	for col, header := range headers {
@@ -132,7 +161,11 @@ func setupHeaders() {
 	}
 }
 
+<<<<<<< HEAD
 // Refresh the table with updated task data
+=======
+// Refresh the table with updated task data.
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 func refreshTable() {
 	table.Clear()
 	setupHeaders()
@@ -147,12 +180,20 @@ func refreshTable() {
 	}
 }
 
+<<<<<<< HEAD
 // Handle keypress events
+=======
+// Handle keypress events.
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 func handleKeypress(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Rune() {
 	case 'c', 'C':
 		toggleTaskStatus("✅ Done")
+<<<<<<< HEAD
 	case 'p', 'P':
+=======
+	case 'x', 'X':
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 		toggleTaskStatus("❌ Pending")
 	case 'a', 'A':
 		addTaskForm()
@@ -161,7 +202,11 @@ func handleKeypress(event *tcell.EventKey) *tcell.EventKey {
 	case 'e', 'E':
 		editTaskForm()
 	case 's', 'S':
+<<<<<<< HEAD
 		saveTasksToS3()
+=======
+		saveTasks()
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 		showMessage("Tasks saved successfully!")
 	case 'h', 'H':
 		showHelp()
@@ -171,7 +216,11 @@ func handleKeypress(event *tcell.EventKey) *tcell.EventKey {
 	return event
 }
 
+<<<<<<< HEAD
 // Toggle task status between "✅ Done" and "❌ Pending"
+=======
+// Toggle task status between "✅ Done" and "❌ Pending".
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 func toggleTaskStatus(status string) {
 	row, _ := table.GetSelection()
 	if row > 0 && row <= len(tasks) {
@@ -190,6 +239,7 @@ func addTaskForm() {
 	form.AddButton("Save", func() {
 		desc := form.GetFormItem(0).(*tview.InputField).GetText()
 		dueDateStr := form.GetFormItem(1).(*tview.InputField).GetText()
+<<<<<<< HEAD
 		priority, _ := form.GetFormItem(2).(*tview.DropDown).GetCurrentOption()
 
 		// Parse the due date
@@ -344,6 +394,126 @@ func showHelp() {
 			app.SetRoot(table, true)
 		})
 
+=======
+		dueDate, err := time.Parse("2006-01-02", dueDateStr)
+		if err != nil || desc == "" {
+			showError("Invalid input! Description cannot be empty & date must be YYYY-MM-DD.")
+			return
+		}
+		_, priority := form.GetFormItem(2).(*tview.DropDown).GetCurrentOption()
+		tasks = append(tasks, Task{taskIDCounter, desc, dueDate, priority, "❌ Pending"})
+		taskIDCounter++
+		refreshTable()
+		app.SetRoot(table, true).SetFocus(table)
+	})
+
+	form.AddButton("Cancel", func() {
+		app.SetRoot(table, true).SetFocus(table)
+	})
+
+	form.SetBorder(true).SetTitle("Add New Task").SetTitleAlign(tview.AlignLeft)
+	app.SetRoot(form, true).SetFocus(form)
+}
+
+// Confirm deletion of a task.
+func confirmDeleteTask() {
+	row, _ := table.GetSelection()
+	if row > 0 && row <= len(tasks) {
+		modal := tview.NewModal().
+			SetText("Are you sure you want to delete this task?").
+			AddButtons([]string{"Yes", "No"}).
+			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				if buttonLabel == "Yes" {
+					tasks = append(tasks[:row-1], tasks[row:]...)
+					refreshTable()
+				}
+				app.SetRoot(table, true).SetFocus(table)
+			})
+		app.SetRoot(modal, true)
+	}
+}
+
+// Edit the selected task using a form.
+func editTaskForm() {
+	row, _ := table.GetSelection()
+	if row > 0 && row <= len(tasks) {
+		task := tasks[row-1]
+		form := tview.NewForm().
+			AddInputField("Description", task.Description, 30, nil, nil).
+			AddInputField("Due Date (YYYY-MM-DD)", task.Due.Format("2006-01-02"), 10, nil, nil).
+			AddDropDown("Priority", []string{"🔥 High", "👍 Medium", "⭐ Low"}, 0, nil)
+
+		form.AddButton("Save", func() {
+			task.Description = form.GetFormItem(0).(*tview.InputField).GetText()
+			dueDateStr := form.GetFormItem(1).(*tview.InputField).GetText()
+			dueDate, err := time.Parse("2006-01-02", dueDateStr)
+			if err != nil || task.Description == "" {
+				showError("Invalid input! Description cannot be empty & date must be YYYY-MM-DD.")
+				return
+			}
+			_, task.Priority = form.GetFormItem(2).(*tview.DropDown).GetCurrentOption()
+			task.Due = dueDate
+			refreshTable()
+			app.SetRoot(table, true).SetFocus(table)
+		})
+
+		form.AddButton("Cancel", func() {
+			app.SetRoot(table, true).SetFocus(table)
+		})
+
+		form.SetBorder(true).SetTitle("Edit Task").SetTitleAlign(tview.AlignLeft)
+		app.SetRoot(form, true).SetFocus(form)
+	}
+}
+
+// Save tasks to a JSON file.
+func saveTasks() {
+	file, err := json.MarshalIndent(tasks, "", "  ")
+	if err != nil {
+		log.Printf("Error marshalling tasks: %v", err)
+		return
+	}
+	if err := os.WriteFile(dataFile, file, 0644); err != nil {
+		log.Printf("Error saving tasks: %v", err)
+	}
+}
+
+// Load tasks from a JSON file.
+func loadTasks() {
+	file, err := os.ReadFile(dataFile)
+	if err != nil {
+		return
+	}
+	if err := json.Unmarshal(file, &tasks); err != nil {
+		log.Printf("Error loading tasks: %v", err)
+	}
+	if len(tasks) > 0 {
+		taskIDCounter = tasks[len(tasks)-1].ID + 1
+	}
+}
+
+// Show an error message in a modal.
+func showError(message string) {
+	modal := tview.NewModal().SetText(message).AddButtons([]string{"OK"}).SetDoneFunc(func(int, string) {
+		app.SetRoot(table, true).SetFocus(table)
+	})
+	app.SetRoot(modal, true)
+}
+
+// Show a success message in a modal.
+func showMessage(message string) {
+	modal := tview.NewModal().SetText(message).AddButtons([]string{"OK"}).SetDoneFunc(func(int, string) {
+		app.SetRoot(table, true).SetFocus(table)
+	})
+	app.SetRoot(modal, true)
+}
+
+// Show a help dialog with keybindings.
+func showHelp() {
+	modal := tview.NewModal().SetText("A: Add | E: Edit | D: Delete | C: Complete | X: Pending | S: Save | H: Help | Q: Quit").AddButtons([]string{"OK"}).SetDoneFunc(func(int, string) {
+		app.SetRoot(table, true).SetFocus(table)
+	})
+>>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 	app.SetRoot(modal, true)
 }
 
