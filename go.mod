@@ -1,6 +1,5 @@
 module todopplication
 
-<<<<<<< HEAD
 go 1.24.1
 
 require (
@@ -8,17 +7,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.11
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.68
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.2
-=======
-go 1.23.4
-
-require (
->>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/rivo/tview v0.0.0-20241227133733-17b7edb88c57
 )
 
 require (
-<<<<<<< HEAD
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.64 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
@@ -34,8 +27,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.29.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.17 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
-=======
->>>>>>> 5a028547f7b5111145029132d4fb3f14a9d658cb
 	github.com/gdamore/encoding v1.0.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
